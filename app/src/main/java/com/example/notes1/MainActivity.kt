@@ -2,21 +2,21 @@ package com.example.notes1
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.os.PersistableBundle
 import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import org.mozilla.javascript.Context
+import org.mozilla.javascript.Scriptable
+
 const val BUNDLE_KEY ="MY_INT_KEY"
 
 class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     fun report(s: String) = Log.d("MAIN_ACTIVITY", s)
-    var clickCount = 0
+    var str :ArrayList<String> = ArrayList()
+
     var result =""
     var solution =""
 
@@ -113,14 +113,18 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        outState.putInt(BUNDLE_KEY, clickCount)
+
+        var strs: List<String> = listOf(solution_vw.getText().toString(), result_vw.getText().toString())
+        str.addAll(strs)
+        outState.putStringArrayList(BUNDLE_KEY,str )
         super.onSaveInstanceState(outState)
     }
 
     override fun onRestoreInstanceState(savedInstanceState: Bundle) {
         super.onRestoreInstanceState(savedInstanceState)
-        clickCount = savedInstanceState.getInt(BUNDLE_KEY,clickCount)
-        //button.text = "Clicks $clickCount"
+        str = savedInstanceState.getStringArrayList(BUNDLE_KEY) as ArrayList<String>
+        result_vw.setText(str[1])
+        solution_vw.setText(str[0])
     }
     override fun onStart() {
         super.onStart()
@@ -161,15 +165,42 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             return
         }
         if(buttonText.equals("C")){
-            data=data.substring(0,data.length-1);
+            if(data.length-1>0){
+            data=data.substring(0,data.length-1)}
+            else{
+                data = "0"
+            }
         }else{
             data=data+buttonText
+        }
+        solution_vw.setText(data)
+        var res: String = getResult(data)
+        if(!res.equals("Error")){
+            result_vw.setText(res)
         }
 
 
 
 
-        solution_vw.setText(data)
+
+
+    }
+
+    fun getResult( data: String):String{
+        try {
+            var context: Context = Context.enter()
+            context.optimizationLevel=-1
+            var scriptable: Scriptable = context.initSafeStandardObjects()
+            var finalResult: String = context.evaluateString(scriptable, data,"Javascript",1, null).toString()
+            if(finalResult.endsWith(".0")) finalResult = finalResult.replace(".0","")
+            val regex = """\.\d{9}""".toRegex()
+            if (regex.containsMatchIn(finalResult)) finalResult=finalResult.substring(0,finalResult.length-10)
+
+
+            return finalResult
+        }catch (e:Exception){
+            return "Error"
+        }
 
     }
 }
